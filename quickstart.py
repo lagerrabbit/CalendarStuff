@@ -7,7 +7,13 @@ import oauth2client
 from oauth2client import client
 from oauth2client import tools
 
+import dateutil.parser
+
+from jinja2 import Environment, FileSystemLoader
+
 import datetime
+
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 try:
     import argparse
@@ -19,7 +25,50 @@ except ImportError:
 # at ~/.credentials/calendar-python-quickstart.json
 SCOPES = 'https://www.googleapis.com/auth/calendar.readonly'
 CLIENT_SECRET_FILE = 'client_secret.json'
-APPLICATION_NAME = 'Google Calendar API Python Quickstart'
+APPLICATION_NAME = 'Google Calendar API P ython Quickstart'
+
+def df(value):
+    key = ""
+    key = 'dateTime' if 'dateTime' in value else ""
+    key = 'date' if key == "" and "date" in value else key
+    if key == "":
+        print(value)
+        return ""
+    format="%I:%M" if key == 'dateTime' else "%d %b " 
+    
+    dv = value[key]
+    d = dateutil.parser.parse(dv)
+    o = d.strftime(format)
+    return o
+
+def ed(value):
+    key = ""
+    key = 'dateTime' if 'dateTime' in value else ""
+    key = 'date' if key == "" and "date" in value else key
+    if key == "":
+        print(value)
+        return ("", "")
+    return (key, dateutil.parser.parse(value[key]))
+   
+
+   
+def dd(event):
+    start = ed(event['start'])
+    end = ed(event['end'])
+    
+    o = ""
+    if start[0] == "date":
+        o = start[1].strftime("%d %b")
+ 
+    if start[0] == "dateTime":
+        o = start[1].strftime("%I:%M")
+
+    if end[0] == "date":
+        o = o + " - " + end[1].strftime("%d %b")
+ 
+    if end[0] == "dateTime":
+        o = o + " - " + end[1].strftime("%I:%M %d %b")        
+    return o
 
 
 def get_credentials():
@@ -71,14 +120,23 @@ def main():
     if not events:
         print('No upcoming events found.')
         # GET https://www.googleapis.com/calendar/v3/calendars/primary/events/n6arcebcdv2b28ds4u8dr14pis?fields=description&key={YOUR_API_KEY}
-    for event in events:
+    
+    j2_env = Environment(loader=FileSystemLoader(THIS_DIR),
+                         trim_blocks=True)
+    j2_env.filters['datetime'] = df
+    j2_env.filters['dd'] = dd
+
+                         
+    print(j2_env.get_template('eventsByName.html').render(events=events))
+    
+#    for event in events:
     
         
-        description = event.get('description', default)
+#        description = event.get('description', default)
 
-        start = event['start'].get('dateTime', event['start'].get('date'))
+#        start = event['start'].get('dateTime', event['start'].get('date'))
 		
-        print ("Time: %s Event: %s Description: %s"%(start, event['summary'], description))
+#        print ("Time: %s Event: %s Description: %s"%(start, event['summary'], description))
 
 
 if __name__ == '__main__':
